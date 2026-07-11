@@ -139,7 +139,7 @@ a {
 .card-meta {
   margin: 0;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   font-weight: 750;
 }
 
@@ -225,7 +225,7 @@ a {
 
 .home-search-tab {
   min-width: 0;
-  min-height: 42px;
+  min-height: 44px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -315,7 +315,7 @@ a {
 
 .chip,
 .tab {
-  min-height: 40px;
+  min-height: 44px;
   flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -436,22 +436,30 @@ a {
 }
 
 .featured-topic-list .news-card {
-  border-color: rgb(181 82 46 / 0.38);
-  background:
-    linear-gradient(90deg, rgb(181 82 46 / 0.08), transparent 42%),
-    var(--surface);
-  box-shadow: 0 12px 28px rgb(19 39 34 / 0.07);
+  border-color: var(--line);
 }
 
 .featured-topic-list .news-card--featured-primary {
   gap: 9px;
   min-height: 132px;
   padding: 18px;
-  border-left: 5px solid var(--mikan);
+  border-color: rgb(181 82 46 / 0.52);
+  background: rgb(181 82 46 / 0.07);
+  box-shadow: 0 12px 28px rgb(19 39 34 / 0.07);
 }
 
 .featured-topic-list .news-card--featured-primary h3 {
   font-size: 1.16rem;
+}
+
+.news-card__status {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--mikan);
+  color: white;
+  font-size: 0.88rem;
+  font-weight: 850;
 }
 
 .place-card,
@@ -552,6 +560,23 @@ a {
   color: var(--tag-ink);
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.map-category-scroll {
+  position: relative;
+  margin-inline: -16px;
+  overflow: hidden;
+}
+
+.map-category-scroll::after {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  bottom: 8px;
+  width: 30px;
+  background: linear-gradient(90deg, transparent, var(--bg));
+  content: "";
+  pointer-events: none;
 }
 
 details {

@@ -38,18 +38,6 @@ export default function MapPage() {
     return placesQuery.data?.places.find((place) => place.id === selectedId);
   }, [placesQuery.data, selectedId]);
 
-  const filteredCount = useMemo(() => {
-    if (!geoQuery.data) {
-      return 0;
-    }
-
-    if (category === "all") {
-      return geoQuery.data.features.length;
-    }
-
-    return geoQuery.data.features.filter((feature) => featureMatchesCategory(feature, category)).length;
-  }, [category, geoQuery.data]);
-
   const filteredPlaces = useMemo(() => {
     const places = placesQuery.data?.places ?? [];
     if (category === "all") {
@@ -58,6 +46,8 @@ export default function MapPage() {
 
     return places.filter((place) => placeMatchesCategory(place, category));
   }, [category, placesQuery.data]);
+
+  const displayedCount = placesQuery.data ? filteredPlaces.length : undefined;
 
   const visiblePlaces = filteredPlaces.slice(0, visibleListCount);
 
@@ -93,21 +83,27 @@ export default function MapPage() {
     <div className="page page--map">
       <header className="compact-head">
         <h1>地図</h1>
-        <p>{filteredCount.toLocaleString("ja-JP")}件を表示しています。</p>
+        <p>
+          {displayedCount === undefined
+            ? "施設を読み込んでいます。"
+            : `${displayedCount.toLocaleString("ja-JP")}件の施設があります。`}
+        </p>
       </header>
 
-      <div className="tab-row tab-row--sticky" role="group" aria-label="施設の絞り込み">
-        {placeCategories.map((item) => (
-          <button
-            type="button"
-            aria-pressed={category === item.id}
-            className={`tab${category === item.id ? " is-active" : ""}`}
-            key={item.id}
-            onClick={() => handleCategorySelect(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
+      <div className="map-category-scroll">
+        <div className="tab-row tab-row--sticky" role="group" aria-label="施設の絞り込み">
+          {placeCategories.map((item) => (
+            <button
+              type="button"
+              aria-pressed={category === item.id}
+              className={`tab${category === item.id ? " is-active" : ""}`}
+              key={item.id}
+              onClick={() => handleCategorySelect(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {geoQuery.isLoading ? <CardSkeleton /> : null}
@@ -195,16 +191,6 @@ function categoryFromQuery(value: string): string {
     .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u30fc\u2212]/g, "-");
 
   return placeCategoryAliases[normalized] ?? "all";
-}
-
-function featureMatchesCategory(feature: FeatureCollection["features"][number], category: string): boolean {
-  const values = [
-    feature.properties.category,
-    feature.properties.dataset_id,
-    ...(feature.properties.categories ?? [])
-  ].filter((value): value is string => Boolean(value));
-
-  return valuesMatchCategory(values, category);
 }
 
 function placeMatchesCategory(place: Place, category: string): boolean {

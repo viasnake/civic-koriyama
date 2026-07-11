@@ -84,7 +84,7 @@ test("map list selects a place on the same page", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/map?category=aed");
 
-  await expect(page.getByText("2件を表示しています。")).toBeVisible();
+  await expect(page.getByText("2件の施設があります。")).toBeVisible();
   await expect(page.getByRole("group", { name: "表示方法" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "施設一覧" })).toBeVisible();
   await expect(page.locator(".map-place-select")).toHaveCount(2);
