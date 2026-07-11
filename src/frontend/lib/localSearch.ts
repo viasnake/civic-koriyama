@@ -63,7 +63,8 @@ function scoreSearchItem(item: SearchIndexItem, terms: string[], hasCategory: bo
       return score + 42;
     }
     if (tags.includes(term)) {
-      return score + 32;
+      // Tags broaden recall, but should not outrank a title or category match.
+      return score + 18;
     }
     if (address.includes(term)) {
       return score + 24;
