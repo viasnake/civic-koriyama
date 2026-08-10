@@ -8,6 +8,7 @@ import type {
   SearchIndexData,
   SearchIndexItem
 } from "../src/shared/types";
+import { filterSearchTags, normalizeSearchText } from "../src/frontend/lib/searchMatcher";
 
 const generatedDir = join(process.cwd(), "public", "generated");
 
@@ -38,13 +39,6 @@ async function readGenerated<T>(name: string): Promise<T> {
 
 function toPlaceSearchItem(place: PlaceListData["places"][number]): SearchIndexItem {
   const keywords = [
-    place.name,
-    place.category,
-    place.categoryLabel,
-    ...(place.categories ?? []),
-    ...(place.categoryLabels ?? []),
-    place.subcategory,
-    place.address,
     place.phone
   ]
     .filter((value): value is string => Boolean(value))
@@ -64,13 +58,9 @@ function toPlaceSearchItem(place: PlaceListData["places"][number]): SearchIndexI
 
 function toNewsSearchItem(entry: NewsEntry): SearchIndexItem {
   const keywords = [
-    entry.title,
-    entry.category,
-    entry.categoryLabel,
     entry.feedId,
     ...(entry.feedIds ?? []),
     ...(entry.feedKinds ?? []),
-    ...entry.tags
   ]
     .filter((value): value is string => Boolean(value))
     .join(" ");
@@ -83,7 +73,7 @@ function toNewsSearchItem(entry: NewsEntry): SearchIndexItem {
     categoryLabel: entry.categoryLabel,
     url: entry.link,
     publishedAt: entry.publishedAt,
-    tags: entry.tags,
+    tags: filterSearchTags(entry.tags, [entry.title, entry.category, entry.categoryLabel]),
     keywords: normalizeSearchText(keywords)
   };
 }
@@ -107,18 +97,9 @@ function toOfficialSiteSearchItem(site: OfficialSite): SearchIndexItem {
     category: "official_site",
     categoryLabel: "公式サイト",
     url: site.url,
-    tags: site.tags,
+    tags: filterSearchTags(site.tags, [site.title]),
     keywords: normalizeSearchText(keywords)
   };
-}
-
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize("NFKC")
-    .trim()
-    .toLowerCase()
-    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u30fc\u2212]/g, "-")
-    .replace(/\s+/g, " ");
 }
 
 void main();

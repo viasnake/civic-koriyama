@@ -3,10 +3,10 @@ import { ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { NewsEntry, NewsListData } from "../../shared/types";
+import { mergeAnnouncements, newsDateKey, newsDateLabel } from "../../shared/announcements";
 import { NewsCard } from "../components/NewsCard";
 import { CardSkeleton, Section, SectionError } from "../components/Section";
 import { newsCategories } from "../lib/constants";
-import { formatDateOnly } from "../lib/format";
 import { generatedFiles, getGeneratedJson } from "../lib/staticDataClient";
 
 const newsPageSize = 24;
@@ -21,27 +21,35 @@ export default function News() {
     queryKey: ["news"],
     queryFn: () => getGeneratedJson<NewsListData>(generatedFiles.news)
   });
-  const entries = filterNews(newsQuery.data?.entries ?? [], category);
+  const entries = useMemo(
+    () => filterNews(mergeAnnouncements(newsQuery.data?.entries ?? []), category),
+    [category, newsQuery.data?.entries]
+  );
   const visibleEntries = entries.slice(0, visibleCount);
   const groups = useMemo(() => groupNewsByDate(visibleEntries), [visibleEntries]);
-  const sectionTitle =
-    category === "all"
-      ? `すべてのお知らせ ${entries.length.toLocaleString("ja-JP")}件`
-      : `${categoryLabel}のお知らせ ${entries.length.toLocaleString("ja-JP")}件`;
 
   useEffect(() => {
     setVisibleCount(newsPageSize);
   }, [category]);
 
   return (
-    <div className="page">
+    <div className="page page--news">
       <header className="compact-head">
-        <h1>お知らせ</h1>
-        <p>市のお知らせをカテゴリ別に見られます。</p>
+        <p className="page-kicker">お知らせ</p>
+        <h1>郡山市からのお知らせ</h1>
+        <p>公開情報をカテゴリと日付で確認できます。掲載内容は公式サイトでもご確認ください。</p>
       </header>
 
-      <div className="news-category-scroll">
-        <div className="tab-row news-category-tabs" role="group" aria-label="お知らせカテゴリ">
+      <div className="news-category-control">
+        <label htmlFor="news-category">カテゴリで絞り込む</label>
+        <select
+          id="news-category"
+          value={category}
+          onChange={(event) => setParams(event.target.value === "all" ? {} : { category: event.target.value })}
+        >
+          {newsCategories.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}
+        </select>
+        <div className="news-category-tabs" role="group" aria-label="お知らせカテゴリ">
           {newsCategories.map((item) => (
             <button
               type="button"
@@ -57,35 +65,24 @@ export default function News() {
       </div>
 
       <Section
-        title={sectionTitle}
-        action={
-          <a className="section-link" href="https://www.city.koriyama.lg.jp/" target="_blank" rel="noreferrer">
-            公式サイト
-            <span className="sr-only">（新しいタブで開きます）</span>
-            <ExternalLink aria-hidden="true" size={14} />
-          </a>
-        }
+        title={`${categoryLabel}のお知らせ ${entries.length.toLocaleString("ja-JP")}件`}
+        action={<a className="section-link" href="https://www.city.koriyama.lg.jp/" target="_blank" rel="noreferrer">公式サイト <span className="sr-only">（新しいタブで開きます）</span><ExternalLink aria-hidden="true" size={14} /></a>}
       >
         {newsQuery.isLoading ? <CardSkeleton /> : null}
-        {newsQuery.isError ? <SectionError message="お知らせを取得できませんでした。" /> : null}
+        {newsQuery.isError ? <SectionError message="お知らせを取得できませんでした。公式サイトで最新情報を確認してください。" /> : null}
+        {!newsQuery.isLoading && !newsQuery.isError && groups.length === 0 ? (
+          <div className="empty-state"><strong>このカテゴリのお知らせはありません</strong><p>別のカテゴリを選ぶか、公式サイトを確認してください。</p></div>
+        ) : null}
         {groups.map((group) => (
-          <section className="news-date-group" key={group.label} aria-labelledby={`news-date-${group.id}`}>
+          <section className="news-date-group" key={group.id} aria-labelledby={`news-date-${group.id}`}>
             <h3 id={`news-date-${group.id}`}>{group.label}</h3>
             <div className="news-date-group__items">
-              {group.entries.map((entry) => (
-                <NewsCard key={entry.id} entry={entry} />
-              ))}
+              {group.entries.map((entry) => <NewsCard key={entry.id} entry={entry} showDate={false} />)}
             </div>
           </section>
         ))}
         {visibleCount < entries.length ? (
-          <button
-            type="button"
-            className="load-more-button"
-            onClick={() => setVisibleCount((count) => count + newsPageSize)}
-          >
-            さらに表示
-          </button>
+          <button type="button" className="load-more-button" onClick={() => setVisibleCount((count) => count + newsPageSize)}>さらに表示</button>
         ) : null}
       </Section>
     </div>
@@ -93,34 +90,18 @@ export default function News() {
 }
 
 function filterNews(entries: NewsEntry[], category: string): NewsEntry[] {
-  if (category === "all") {
-    return entries;
-  }
-
-  return entries.filter((entry) => entry.category === category);
+  return category === "all" ? entries : entries.filter((entry) => entry.category === category);
 }
 
-type NewsDateGroup = {
-  id: string;
-  label: string;
-  entries: NewsEntry[];
-};
+type NewsDateGroup = { id: string; label: string; entries: NewsEntry[] };
 
 function groupNewsByDate(entries: NewsEntry[]): NewsDateGroup[] {
   const groups = new Map<string, NewsDateGroup>();
-
   entries.forEach((entry) => {
-    const id = entry.publishedAt ? entry.publishedAt.slice(0, 10) : "unknown";
-    const label = entry.publishedAt ? formatDateOnly(entry.publishedAt) : "日付未設定";
-    const group = groups.get(id) ?? {
-      id,
-      label,
-      entries: []
-    };
-
+    const id = newsDateKey(entry.publishedAt);
+    const group = groups.get(id) ?? { id, label: newsDateLabel(entry.publishedAt), entries: [] };
     group.entries.push(entry);
     groups.set(id, group);
   });
-
   return Array.from(groups.values());
 }

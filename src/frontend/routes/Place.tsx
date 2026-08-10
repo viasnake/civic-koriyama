@@ -6,6 +6,7 @@ import type { PlaceListData } from "../../shared/types";
 import { CardSkeleton, Section, SectionError } from "../components/Section";
 import { googleMapsUrl } from "../lib/format";
 import { generatedFiles, getGeneratedJson } from "../lib/staticDataClient";
+import { formatDate } from "../lib/format";
 
 const PlaceMap = lazy(() => import("../components/PlaceMap"));
 
@@ -16,7 +17,7 @@ export default function Place() {
     queryKey: ["place", id],
     queryFn: async () => {
       const placesData = await getGeneratedJson<PlaceListData>(generatedFiles.places);
-      return placesData.places.find((item) => item.id === id);
+      return placesData.places.find((item) => item.id === id) ?? null;
     },
     enabled: Boolean(id)
   });
@@ -25,7 +26,7 @@ export default function Place() {
   const hasMap = place?.lat !== undefined && place?.lng !== undefined;
 
   return (
-    <div className="page">
+    <div className="page page--place">
       <header className="compact-head">
         <Link to="/search" className="section-link">
           探すへ
@@ -38,7 +39,13 @@ export default function Place() {
       {placeQuery.isError ? <SectionError message="地点情報を取得できませんでした。" /> : null}
 
       {place ? (
-        <Section title="基本情報">
+        <div className="place-detail-layout">
+          <Section title="施設情報" className="place-detail-info">
+          <div className="place-detail-actions" aria-label="主要な操作">
+            {place.phone ? <a className="primary-link" href={`tel:${place.phone}`}><Phone aria-hidden="true" size={16} />電話する</a> : null}
+            {mapsUrl ? <a className="text-link action-link" href={mapsUrl} target="_blank" rel="noreferrer">Google Maps <span className="sr-only">（新しいタブで開きます）</span><ExternalLink aria-hidden="true" size={14} /></a> : null}
+            {place.officialUrl ? <a className="text-link action-link" href={place.officialUrl} target="_blank" rel="noreferrer">公式ページ <span className="sr-only">（新しいタブで開きます）</span><ExternalLink aria-hidden="true" size={14} /></a> : null}
+          </div>
           {place.address ? (
             <p className="card-line card-line--large">
               <MapPin aria-hidden="true" size={18} />
@@ -51,39 +58,22 @@ export default function Place() {
               <a href={`tel:${place.phone}`}>{place.phone}</a>
             </p>
           ) : null}
-          <div className="sheet-actions">
-            {mapsUrl ? (
-              <a className="primary-link" href={mapsUrl} target="_blank" rel="noreferrer">
-                Google Mapsで見る
-                <span className="sr-only">（新しいタブで開きます）</span>
-                <ExternalLink aria-hidden="true" size={16} />
-              </a>
-            ) : null}
-            {place.officialUrl ? (
-              <a className="text-link" href={place.officialUrl} target="_blank" rel="noreferrer">
-                公式ページ
-                <span className="sr-only">（新しいタブで開きます）</span>
-                <ExternalLink aria-hidden="true" size={14} />
-              </a>
-            ) : null}
-            {place.sourceUrl ? (
-              <a className="text-link" href={place.sourceUrl} target="_blank" rel="noreferrer">
-                出典
-                <span className="sr-only">（新しいタブで開きます）</span>
-                <ExternalLink aria-hidden="true" size={14} />
-              </a>
-            ) : null}
-          </div>
-        </Section>
-      ) : null}
+          <dl className="place-detail-meta">
+            <div><dt>出典</dt><dd>{place.sourceUrl ? <a href={place.sourceUrl} target="_blank" rel="noreferrer">郡山市オープンデータ<span className="sr-only">（新しいタブで開きます）</span></a> : "郡山市の公開情報"}</dd></div>
+            <div><dt>最終取得</dt><dd>{formatDate(place.lastSeenAt) || "日付未設定"}</dd></div>
+            <div><dt>位置</dt><dd>地図の位置は目安です</dd></div>
+          </dl>
+          </Section>
 
-      {place && hasMap ? (
-        <Section title="地図">
+          {hasMap ? (
+            <Section title="地図" className="place-detail-map">
           <Suspense fallback={<CardSkeleton />}>
             <PlaceMap place={place} />
           </Suspense>
           <p className="notice-line">地図の位置は目安です。訪問前に公式情報を確認してください。</p>
-        </Section>
+            </Section>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

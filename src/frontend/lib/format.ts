@@ -11,6 +11,7 @@ export function formatDate(value?: string): string {
   }
 
   return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
     month: "numeric",
     day: "numeric",
     hour: "2-digit",
@@ -29,6 +30,7 @@ export function formatDateOnly(value?: string): string {
   }
 
   return new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
     year: "numeric",
     month: "numeric",
     day: "numeric"

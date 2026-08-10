@@ -30,7 +30,8 @@
     { "id": "news_27", "title": "美術館イベント", "link": "/news/27", "category": "event", "categoryLabel": "イベント", "publishedAt": "2026-06-12T07:00:00.000Z", "tags": ["美術館"] },
     { "id": "news_28", "title": "乳幼児健診", "link": "/news/28", "category": "childcare", "categoryLabel": "子育て", "publishedAt": "2026-06-11T09:00:00.000Z", "tags": ["健診"] },
     { "id": "news_29", "title": "窓口混雑予想", "link": "/news/29", "category": "city_admin", "categoryLabel": "施設・行政", "publishedAt": "2026-06-11T08:00:00.000Z", "tags": ["窓口"] },
-    { "id": "news_30", "title": "事業承継セミナー", "link": "/news/30", "category": "business", "categoryLabel": "事業者", "publishedAt": "2026-06-11T07:00:00.000Z", "tags": ["セミナー"] }
+    { "id": "news_30", "title": "事業承継セミナー", "link": "/news/30", "category": "business", "categoryLabel": "事業者", "publishedAt": "2026-06-11T07:00:00.000Z", "tags": ["セミナー"] },
+    { "id": "news_music_fixture", "title": "音楽祭を開催します", "link": "/news/music-fixture", "category": "event", "categoryLabel": "イベント", "publishedAt": "2026-06-10T07:00:00.000Z", "tags": ["イベント"] }
   ],
   "official_sites": [
     {

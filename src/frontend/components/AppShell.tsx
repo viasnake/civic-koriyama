@@ -85,6 +85,7 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
       <main id="content" className="app-main">
+        <DataStatusBanner meta={buildMetaQuery.data} healthStatus={homeQuery.data?.health.status} />
         {children}
       </main>
       <footer className="site-footer" aria-label="サイト情報">
@@ -161,6 +162,38 @@ function dataFreshnessLabel(meta: BuildMeta | undefined, healthStatus: HomeData[
   }
 
   return `最終更新 ${formattedAt}`;
+}
+
+function DataStatusBanner({
+  meta,
+  healthStatus
+}: {
+  meta?: BuildMeta;
+  healthStatus?: HomeData["health"]["status"];
+}) {
+  if (!meta) {
+    return null;
+  }
+
+  const isDegraded = meta.status === "stale" || healthStatus === "degraded" || meta.warnings.length > 0;
+  if (!isDegraded) {
+    return (
+      <p className="data-status data-status--quiet">
+        <span className="data-status__dot" aria-hidden="true" />
+        データは定期的に更新しています。最終取得 {formatDate(meta.generated_at)}
+      </p>
+    );
+  }
+
+  return (
+    <div className="data-status data-status--degraded" role="status">
+      <strong>一部の情報を確認できません</strong>
+      <p>
+        画面に表示されている情報が古い可能性があります。最終取得は {formatDate(meta.generated_at)} です。
+        正確な内容は <a href="https://www.city.koriyama.lg.jp/" target="_blank" rel="noreferrer">郡山市公式サイト</a> で確認してください。
+      </p>
+    </div>
+  );
 }
 
 function normalizeSiteUrl(value: unknown): string | undefined {
