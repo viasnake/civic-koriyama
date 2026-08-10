@@ -724,18 +724,23 @@ test("skip link is hidden in normal map state and visible only when focused", as
   await expect(page.locator(".skip-link")).toBeFocused();
 });
 
-test("degraded home health is explained near the top of the page", async ({ page }) => {
+test("data collection failures do not create a warning banner", async ({ page }) => {
   const homeFixture = JSON.parse(await readFile(resolve(generatedFixtureDir, "home.json"), "utf8")) as { health: { status: string } };
+  const buildMetaFixture = JSON.parse(await readFile(resolve(generatedFixtureDir, "build-meta.json"), "utf8")) as {
+    status: string;
+    warnings: string[];
+  };
   homeFixture.health.status = "degraded";
+  buildMetaFixture.status = "stale";
+  buildMetaFixture.warnings = ["expected scraping failure"];
   await page.route("**/generated/home.json", (route) => route.fulfill({ json: homeFixture }));
+  await page.route("**/generated/build-meta.json", (route) => route.fulfill({ json: buildMetaFixture }));
   await page.goto("/");
-  const degradedBanner = page.locator(".data-status--degraded");
-  await expect(degradedBanner).toHaveAttribute("role", "status");
-  await expect(degradedBanner).toBeVisible();
-  await expect(degradedBanner).toContainText("一部の情報を確認できません");
-  await expect(degradedBanner).toContainText("郡山市公式サイト");
-  expect(await degradedBanner.evaluate((element) => element.tagName)).toBe("DIV");
-  await expect(page.locator('aside[role="status"]')).toHaveCount(0);
+  await expect(page.locator(".data-status--degraded")).toHaveCount(0);
+  await expect(page.getByText("一部の情報を確認できません")).toHaveCount(0);
+  const updateStatus = page.locator(".data-status--quiet");
+  await expect(updateStatus).toBeVisible();
+  await expect(updateStatus).toContainText("データは定期的に更新しています。最終取得");
 });
 
 async function routeGeneratedData(page: Page): Promise<void> {

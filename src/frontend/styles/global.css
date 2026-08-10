@@ -45,10 +45,6 @@ h1, h2, h3, p { text-wrap: pretty; }
 .data-status { margin: 14px 0 0; line-height: 1.55; }
 .data-status--quiet { color: var(--muted); font-size: 0.875rem; }
 .data-status__dot { display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--leaf); }
-.data-status--degraded { padding: 14px 16px; border: 1px solid rgb(152 64 31 / 0.45); border-radius: 8px; background: #fff7f2; color: #5b2819; }
-.data-status--degraded strong { display: block; color: var(--mikan); }
-.data-status--degraded p { margin: 3px 0 0; }
-.data-status a { color: var(--forest); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 
 .home-intro { display: grid; gap: 16px; padding: 24px 0 26px; border-bottom: 2px solid var(--forest); }
 .home-intro__identity { display: flex; align-items: center; gap: 11px; }
