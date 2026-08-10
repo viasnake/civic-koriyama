@@ -20,6 +20,7 @@ export default function SearchPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const query = params.get("q") ?? "";
+  const officialSearchQuery = query.trim();
   const category = resolvePlaceCategory(params.get("category"));
   const resultType = resolveResultType(params.get("type"));
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -100,10 +101,10 @@ export default function SearchPage() {
             )) : <ZeroResults />}
           </Section>
 
-          {searchConfig.programmableSearch.enabled ? (
+          {searchConfig.programmableSearch.enabled && officialSearchQuery.length > 0 ? (
             <Section title="郡山市公式サイト">
               <p className="section-intro">制度や手続きの正式な案内を、郡山市公式サイトから確認できます。</p>
-              <OfficialSearchResults cx={searchConfig.programmableSearch.cx} query={query} />
+              <OfficialSearchResults cx={searchConfig.programmableSearch.cx} query={officialSearchQuery} />
             </Section>
           ) : null}
 

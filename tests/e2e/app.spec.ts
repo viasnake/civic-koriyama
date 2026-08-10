@@ -169,6 +169,21 @@ test("structured place category search returns places and map link", async ({ pa
   await expect(page.getByRole("link", { name: /地図で見る（2施設）/ }).first()).toHaveAttribute("href", "/map?category=aed");
 });
 
+test("category-only search does not load query-dependent official results", async ({ page }) => {
+  const fixture = JSON.parse(
+    await readFile(resolve(generatedFixtureDir, "search-index.json"), "utf8")
+  ) as { items: SearchIndexItem[] };
+  const place = fixture.items.find((item) => item.type === "place" && (item.categories?.length || item.category));
+  const category = place?.categories?.[0] ?? place?.category;
+
+  expect(category).toBeTruthy();
+  await page.goto(`/search?type=place&category=${encodeURIComponent(category ?? "")}`);
+
+  await expect(page.locator(".active-filter")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "郡山市公式サイト" })).toHaveCount(0);
+  await expect(page.locator("#google-programmable-search")).toHaveCount(0);
+});
+
 test("free text search can be limited to news", async ({ page }) => {
   await page.goto("/search?q=熱中症&type=news");
 
