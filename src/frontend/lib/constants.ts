@@ -13,12 +13,9 @@ export const placeCategories = [
 
 export const placeCategoryAliases: Record<string, string> = {
   aed: "aed",
-  "ａｅｄ": "aed",
   "wi-fi": "public_wifi",
   wifi: "public_wifi",
   "wi fi": "public_wifi",
-  "ｗｉ-ｆｉ": "public_wifi",
-  "ｗｉｆｉ": "public_wifi",
   "トイレ": "public_toilets",
   "といれ": "public_toilets",
   "公衆トイレ": "public_toilets",
@@ -32,6 +29,17 @@ export const placeCategoryAliases: Record<string, string> = {
   "中学校": "education",
   "公共施設": "facility",
   "施設": "facility"
+};
+
+export const placeCategoryEquivalences: Record<string, readonly string[]> = {
+  all: ["all"],
+  aed: ["aed", "safety"],
+  public_wifi: ["public_wifi", "wifi"],
+  public_toilets: ["public_toilets", "toilets"],
+  medical: ["medical", "medical_institutions"],
+  education: ["education", "schools"],
+  childcare: ["childcare", "childcare_facilities"],
+  facility: ["facility", "public_facilities"]
 };
 
 export const newsCategories = [

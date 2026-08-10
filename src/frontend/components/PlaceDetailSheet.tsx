@@ -1,4 +1,5 @@
 import { ExternalLink, MapPin, Phone, X } from "lucide-react";
+import type { RefObject } from "react";
 import type { Place } from "../../shared/types";
 import { googleMapsUrl } from "../lib/format";
 
@@ -8,6 +9,7 @@ type PlaceDetailSheetProps = {
   errorMessage?: string;
   onClose?: () => void;
   variant?: "default" | "compact";
+  headingRef?: RefObject<HTMLHeadingElement>;
 };
 
 export function PlaceDetailSheet({
@@ -15,7 +17,8 @@ export function PlaceDetailSheet({
   isLoading = false,
   errorMessage,
   onClose,
-  variant = "default"
+  variant = "default",
+  headingRef
 }: PlaceDetailSheetProps) {
   const sheetClassName = `detail-sheet${variant === "compact" ? " detail-sheet--compact" : ""}`;
 
@@ -48,7 +51,7 @@ export function PlaceDetailSheet({
       <aside className={sheetClassName}>
         <SheetTop onClose={onClose} />
         <div className="card-kicker">{place.categoryLabel}</div>
-        <h2>{place.name}</h2>
+        <h2 ref={headingRef} tabIndex={-1}>{place.name}</h2>
         {place.address ? (
           <p className="card-line">
             <MapPin aria-hidden="true" size={16} />

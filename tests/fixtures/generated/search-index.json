@@ -42,6 +42,16 @@
       "keywords": "中央図書館wi-fi public_wifi wi-fi public_wifi 麓山一丁目5-25"
     },
     {
+      "id": "place_nagomi",
+      "type": "place",
+      "name": "なごみ保育園",
+      "category": "childcare",
+      "categoryLabel": "子育て",
+      "categories": ["childcare"],
+      "address": "安積町一丁目2-3",
+      "keywords": "なごみ保育園 childcare 子育て 安積町一丁目2-3"
+    },
+    {
       "id": "news_01",
       "type": "news",
       "name": "熱中症に注意してください",
@@ -51,6 +61,39 @@
       "publishedAt": "2026-06-20T09:00:00.000Z",
       "tags": ["熱中症", "防災"],
       "keywords": "熱中症に注意してください disaster 防災 熱中症 防災"
+    },
+    {
+      "id": "news_music_fixture",
+      "type": "news",
+      "name": "音楽祭を開催します",
+      "category": "event",
+      "categoryLabel": "イベント",
+      "url": "/news/music-fixture",
+      "publishedAt": "2026-06-19T07:00:00.000Z",
+      "tags": ["イベント"],
+      "keywords": "音楽祭を開催します event イベント"
+    },
+    {
+      "id": "news_08",
+      "type": "news",
+      "name": "ごみ収集日の変更",
+      "category": "life",
+      "categoryLabel": "くらし",
+      "url": "/news/08",
+      "publishedAt": "2026-06-18T08:00:00.000Z",
+      "tags": ["ごみ"],
+      "keywords": "ごみ収集日の変更 life くらし ごみ"
+    },
+    {
+      "id": "news_26",
+      "type": "news",
+      "name": "住民票の手続き",
+      "category": "life",
+      "categoryLabel": "くらし",
+      "url": "/news/26",
+      "publishedAt": "2026-06-12T08:00:00.000Z",
+      "tags": ["住民票"],
+      "keywords": "住民票の手続き life くらし 住民票"
     }
   ]
 }

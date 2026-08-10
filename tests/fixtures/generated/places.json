@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-06-20T12:00:00.000Z",
-  "count": 4,
+  "count": 5,
   "places": [
     {
       "id": "place_aed_1",
@@ -53,6 +53,19 @@
       "lat": 37.397,
       "lng": 140.37,
       "firstSeenAt": "2026-06-16T12:00:00.000Z",
+      "lastSeenAt": "2026-06-20T12:00:00.000Z"
+    },
+    {
+      "id": "place_nagomi",
+      "name": "なごみ保育園",
+      "category": "childcare",
+      "categoryLabel": "子育て",
+      "categories": ["childcare"],
+      "categoryLabels": ["子育て"],
+      "address": "安積町一丁目2-3",
+      "lat": 37.37,
+      "lng": 140.36,
+      "firstSeenAt": "2026-06-19T12:00:00.000Z",
       "lastSeenAt": "2026-06-20T12:00:00.000Z"
     }
   ]

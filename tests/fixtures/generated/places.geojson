@@ -53,6 +53,19 @@
         "source_name": "郡山市オープンデータ",
         "unofficial": true
       }
+    },
+    {
+      "type": "Feature",
+      "id": "place_nagomi",
+      "geometry": { "type": "Point", "coordinates": [140.36, 37.37] },
+      "properties": {
+        "name": "なごみ保育園",
+        "dataset_id": "childcare_facilities",
+        "category": "childcare",
+        "categories": ["childcare"],
+        "source_name": "郡山市オープンデータ",
+        "unofficial": true
+      }
     }
   ]
 }

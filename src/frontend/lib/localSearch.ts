@@ -1,5 +1,18 @@
 import type { SearchIndexItem } from "../../shared/types";
-import { placeCategoryAliases } from "./constants";
+import { placeCategoryAliases, placeCategoryEquivalences } from "./constants";
+import type { SearchResultHighlight } from "./tagSelection";
+import {
+  findPreparedSearchMatchRanges,
+  matchPreparedSearchFields,
+  partitionSearchMatchRangesByValues,
+  preparedSearchFieldsHaveMatch,
+  type SearchFieldName,
+  type SearchMatch,
+  type PreparedSearchIndex,
+  tokenizeSearchText
+} from "./searchMatcher";
+
+export { normalizeSearchText } from "./searchMatcher";
 
 export type SearchResultType = "all" | "place" | "news";
 
@@ -8,12 +21,61 @@ export type LocalSearchFilters = {
   category?: string;
 };
 
+export type SuggestionSearchStats = {
+  candidateVisits: number;
+  matchesFound: number;
+  queryPreparations: number;
+};
+
+export type { SearchResultHighlight } from "./tagSelection";
+
+export type LocalSearchResult = {
+  item: SearchIndexItem;
+  score: number;
+  match: SearchMatch;
+  reason: string;
+  highlights: Partial<Record<SearchFieldName, SearchResultHighlight[]>>;
+  tagHighlights: SearchResultHighlight[][];
+};
+
+export function availableSearchSuggestions(
+  suggestions: string[],
+  preparedIndex: PreparedSearchIndex,
+  limit = 4,
+  stats?: SuggestionSearchStats
+): string[] {
+  const available: string[] = [];
+  for (const suggestion of suggestions) {
+    const queryTokens = tokenizeSearchText(suggestion);
+    stats && (stats.queryPreparations += 1);
+    if (queryTokens.length === 0) {
+      continue;
+    }
+
+    for (const preparedItem of preparedIndex.items) {
+      stats && (stats.candidateVisits += 1);
+      if (!preparedSearchFieldsHaveMatch(queryTokens, preparedItem.fields)) {
+        continue;
+      }
+      available.push(suggestion);
+      stats && (stats.matchesFound += 1);
+      break;
+    }
+
+    if (available.length >= limit) {
+      break;
+    }
+  }
+  return available;
+}
+
 export function searchLocalItems(
   query: string,
-  indexItems: SearchIndexItem[],
+  index: PreparedSearchIndex,
   filters: LocalSearchFilters = {}
-): SearchIndexItem[] {
-  const normalized = normalizeSearchText(query);
+): LocalSearchResult[] {
+  const queryTokens = tokenizeSearchText(query);
+  const normalized = queryTokens.map((token) => token.text).join(" ");
   const category = filters.category ?? placeCategoryAliases[normalized];
   const type = filters.type ?? "all";
 
@@ -21,90 +83,56 @@ export function searchLocalItems(
     return [];
   }
 
-  const terms = normalized.split(" ").filter(Boolean);
-
-  return indexItems
-    .filter((item) => type === "all" || item.type === type)
-    .filter((item) => !category || (item.type === "place" && itemMatchesPlaceCategory(item, category)))
-    .map((item) => ({
-      item,
-      score: scoreSearchItem(item, terms, Boolean(category))
-    }))
+  return index.items
+    .filter(({ item }) => type === "all" || item.type === type)
+    .filter(({ item }) => !category || (item.type === "place" && itemMatchesPlaceCategory(item, category)))
+    .map((preparedItem) => {
+      const match = queryTokens.length
+        ? matchPreparedSearchFields(queryTokens, preparedItem.fields)
+        : { score: 0, evidence: [] };
+      const highlights = queryTokens.length
+        ? Object.fromEntries(
+            preparedItem.fields.map((field) => [
+              field.field.name,
+              findPreparedSearchMatchRanges(field, queryTokens)
+            ])
+          ) as Partial<Record<SearchFieldName, SearchResultHighlight[]>>
+        : {};
+      const tagField = preparedItem.fields.find(({ field }) => field.name === "tags");
+      const tagHighlights = tagField?.field.values
+        ? partitionSearchMatchRangesByValues(tagField.field.values, highlights.tags ?? [])
+        : [];
+      const score = queryTokens.length ? match.score : category ? 1 : 0;
+      return {
+        item: preparedItem.item,
+        score,
+        match,
+        reason: searchMatchReason(match, Boolean(category)),
+        highlights,
+        tagHighlights
+      };
+    })
     .filter(({ score }) => score > 0)
     .sort((left, right) => right.score - left.score || left.item.name.localeCompare(right.item.name, "ja"))
-    .map(({ item }) => item);
 }
 
-function scoreSearchItem(item: SearchIndexItem, terms: string[], hasCategory: boolean): number {
-  if (terms.length === 0) {
-    return hasCategory ? 1 : 0;
-  }
-
-  const name = normalizeSearchText(item.name);
-  const category = normalizeSearchText(`${item.category} ${item.categoryLabel} ${(item.categories ?? []).join(" ")}`);
-  const tags = normalizeSearchText((item.tags ?? []).join(" "));
-  const address = normalizeSearchText(item.address ?? "");
-
-  if (!terms.every((term) => item.keywords.includes(term))) {
-    return 0;
-  }
-
-  return terms.reduce((score, term) => {
-    if (name === term) {
-      return score + 100;
-    }
-    if (name.startsWith(term)) {
-      return score + 80;
-    }
-    if (name.includes(term)) {
-      return score + 60;
-    }
-    if (category.includes(term)) {
-      return score + 42;
-    }
-    if (tags.includes(term)) {
-      return score + 32;
-    }
-    if (address.includes(term)) {
-      return score + 24;
-    }
-    return score + 10;
-  }, 0);
-}
-
-export function normalizeSearchText(value: string): string {
-  return value
-    .normalize("NFKC")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015\u30fc\u2212]/g, "-");
+function searchMatchReason(match: SearchMatch, isCategoryMatch: boolean): string {
+  const field = [...match.evidence].sort((left, right) => right.score - left.score)[0]?.field;
+  return field === "name"
+    ? "名称に一致"
+    : field === "category"
+      ? "カテゴリに一致"
+      : field === "tags"
+        ? "タグに一致"
+        : field === "address"
+        ? "住所に一致"
+        : isCategoryMatch
+          ? "カテゴリで一致"
+          : "関連する情報";
 }
 
 function itemMatchesPlaceCategory(item: SearchIndexItem, category: string): boolean {
   const values = [item.category, ...(item.categories ?? [])].filter(Boolean);
-
-  if (category === "aed") {
-    return values.includes("aed") || values.includes("safety");
-  }
-  if (category === "public_wifi") {
-    return values.includes("public_wifi") || values.includes("wifi");
-  }
-  if (category === "public_toilets") {
-    return values.includes("public_toilets") || values.includes("toilets");
-  }
-  if (category === "medical") {
-    return values.includes("medical") || values.includes("medical_institutions");
-  }
-  if (category === "education") {
-    return values.includes("education") || values.includes("schools");
-  }
-  if (category === "childcare") {
-    return values.includes("childcare") || values.includes("childcare_facilities");
-  }
-  if (category === "facility") {
-    return values.includes("facility") || values.includes("public_facilities");
-  }
-
-  return values.includes(category);
+  const equivalentValues = placeCategoryEquivalences[category] ?? [category];
+  return values.some((value) => equivalentValues.includes(value));
 }

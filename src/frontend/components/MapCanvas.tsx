@@ -4,6 +4,8 @@ import "leaflet.markercluster";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import { placeCategoryEquivalences } from "../lib/constants";
+import type { SafeRect } from "../lib/mapSafeArea";
 import type { FeatureCollection, PointFeature } from "../../shared/types";
 
 type MapCanvasProps = {
@@ -11,15 +13,29 @@ type MapCanvasProps = {
   category: string;
   selectedId?: string;
   onSelect: (id: string) => void;
+  active?: boolean;
+  safeRect?: SafeRect;
+  onMapReady?: () => void;
 };
 
 const center: [number, number] = [37.4005, 140.3597];
 
-export default function MapCanvas({ collection, category, selectedId, onSelect }: MapCanvasProps) {
+export default function MapCanvas({ collection, category, selectedId, onSelect, active = true, safeRect, onMapReady }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const clusterRef = useRef<L.MarkerClusterGroup | null>(null);
   const markerByIdRef = useRef<Map<string, MarkerEntry>>(new Map());
+  const selectedOverlayRef = useRef<L.Marker | null>(null);
+  const onSelectRef = useRef(onSelect);
+  const onMapReadyRef = useRef(onMapReady);
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+
+  useEffect(() => {
+    onMapReadyRef.current = onMapReady;
+  }, [onMapReady]);
 
   const features = useMemo(() => {
     if (category === "all") {
@@ -48,26 +64,36 @@ export default function MapCanvas({ collection, category, selectedId, onSelect }
     const cluster = L.markerClusterGroup({
       maxClusterRadius: 42,
       showCoverageOnHover: false,
-      spiderfyOnMaxZoom: true
+      spiderfyOnMaxZoom: true,
+      animate: false
     });
 
     map.addLayer(cluster);
     mapRef.current = map;
     clusterRef.current = cluster;
-
-    const invalidateTimer = window.setTimeout(() => {
-      if (mapRef.current === map) {
-        map.invalidateSize();
-      }
-    }, 80);
+    onMapReadyRef.current?.();
 
     return () => {
-      window.clearTimeout(invalidateTimer);
+      markerByIdRef.current.forEach(({ marker }) => marker.off());
+      markerByIdRef.current.clear();
+      selectedOverlayRef.current?.remove();
+      selectedOverlayRef.current = null;
       map.remove();
       mapRef.current = null;
       clusterRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const cluster = clusterRef.current;
+    if (!active || !map || !cluster) {
+      return;
+    }
+
+    map.invalidateSize();
+    cluster.refreshClusters();
+  }, [active]);
 
   useEffect(() => {
     const cluster = clusterRef.current;
@@ -76,15 +102,18 @@ export default function MapCanvas({ collection, category, selectedId, onSelect }
       return;
     }
 
+    markerByIdRef.current.forEach(({ marker }) => marker.off());
     cluster.clearLayers();
     markerByIdRef.current.clear();
+    selectedOverlayRef.current?.remove();
+    selectedOverlayRef.current = null;
     const bounds = L.latLngBounds([]);
 
     features.forEach((feature) => {
       const marker = makeMarker(feature, false);
       marker.on("click", () => {
         if (feature.id !== undefined) {
-          onSelect(String(feature.id));
+          onSelectRef.current(String(feature.id));
         }
       });
       cluster.addLayer(marker);
@@ -93,8 +122,7 @@ export default function MapCanvas({ collection, category, selectedId, onSelect }
       if (feature.id !== undefined) {
         markerByIdRef.current.set(String(feature.id), {
           feature,
-          marker,
-          selected: false
+          marker
         });
       }
     });
@@ -106,24 +134,21 @@ export default function MapCanvas({ collection, category, selectedId, onSelect }
         animate: false
       });
     }
-  }, [features, onSelect]);
+    return () => {
+      markerByIdRef.current.forEach(({ marker }) => marker.off());
+      markerByIdRef.current.clear();
+      selectedOverlayRef.current?.remove();
+      selectedOverlayRef.current = null;
+      cluster.clearLayers();
+    };
+  }, [features]);
 
   useEffect(() => {
-    markerByIdRef.current.forEach((entry, id) => {
-      const nextSelected = id === selectedId;
-      if (entry.selected === nextSelected) {
-        return;
-      }
-
-      entry.marker.setIcon(makeIcon(entry.feature, nextSelected));
-      entry.selected = nextSelected;
-    });
-  }, [features, selectedId]);
-
-  useEffect(() => {
-    const cluster = clusterRef.current;
     const map = mapRef.current;
-    if (!selectedId || !cluster || !map) {
+    selectedOverlayRef.current?.remove();
+    selectedOverlayRef.current = null;
+
+    if (!selectedId || !map) {
       return;
     }
 
@@ -132,11 +157,47 @@ export default function MapCanvas({ collection, category, selectedId, onSelect }
       return;
     }
 
-    cluster.zoomToShowLayer(entry.marker, () => {
-      const target = entry.marker.getLatLng();
-      map.setView(target, Math.max(map.getZoom(), 16), { animate: false });
-    });
-  }, [selectedId]);
+    const overlay = L.marker(entry.marker.getLatLng(), {
+      icon: makeIcon(entry.feature, true),
+      interactive: true,
+      keyboard: false,
+      zIndexOffset: 1000,
+      title: entry.feature.properties.name
+    }).addTo(map);
+    selectedOverlayRef.current = overlay;
+    map.setView(entry.marker.getLatLng(), Math.max(map.getZoom(), 18), { animate: false });
+
+    return () => {
+      overlay.remove();
+      if (selectedOverlayRef.current === overlay) {
+        selectedOverlayRef.current = null;
+      }
+    };
+  }, [features, selectedId]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!selectedId || !map) {
+      return;
+    }
+
+    const entry = markerByIdRef.current.get(selectedId);
+    if (!entry) {
+      return;
+    }
+
+    map.invalidateSize();
+    const position = entry.marker.getLatLng();
+    map.setView(position, Math.max(map.getZoom(), 18), { animate: false });
+    if (safeRect) {
+      const point = map.latLngToContainerPoint(position);
+      const target = {
+        x: (safeRect.left + safeRect.right) / 2,
+        y: (safeRect.top + safeRect.bottom) / 2
+      };
+      map.panBy([point.x - target.x, point.y - target.y], { animate: false });
+    }
+  }, [active, features, safeRect, selectedId]);
 
   return <div ref={containerRef} className="map-canvas" aria-label="施設マップ" />;
 }
@@ -144,7 +205,6 @@ export default function MapCanvas({ collection, category, selectedId, onSelect }
 type MarkerEntry = {
   feature: PointFeature;
   marker: L.Marker;
-  selected: boolean;
 };
 
 function makeMarker(feature: PointFeature, selected: boolean): L.Marker {
@@ -211,29 +271,13 @@ function categoryCandidates(feature: PointFeature): string[] {
   );
   const candidates = new Set(values);
 
-  values.forEach((value) => {
-    if (value === "aed" || value === "safety") {
-      candidates.add("aed");
+  for (const value of values) {
+    for (const [category, aliases] of Object.entries(placeCategoryEquivalences)) {
+      if (aliases.includes(value)) {
+        candidates.add(category);
+      }
     }
-    if (value === "public_wifi" || value === "wifi") {
-      candidates.add("public_wifi");
-    }
-    if (value === "public_toilets" || value === "toilets") {
-      candidates.add("public_toilets");
-    }
-    if (value === "medical" || value === "medical_institutions") {
-      candidates.add("medical");
-    }
-    if (value === "education" || value === "schools") {
-      candidates.add("education");
-    }
-    if (value === "childcare" || value === "childcare_facilities") {
-      candidates.add("childcare");
-    }
-    if (value === "facility" || value === "public_facilities") {
-      candidates.add("facility");
-    }
-  });
+  }
 
   return Array.from(candidates);
 }

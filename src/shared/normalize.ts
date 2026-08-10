@@ -140,7 +140,7 @@ export function normalizeNewsEntry(value: unknown): NewsEntry | null {
     publishedAt: toStringValue(record.published_at),
     fetchedAt: toStringValue(record.fetched_at),
     sourceHash: toStringValue(record.source_hash),
-    tags: toStringArray(record.tags)
+    tags: uniqueStrings(toStringArray(record.tags))
   };
 }
 
